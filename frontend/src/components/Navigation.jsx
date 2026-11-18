@@ -77,7 +77,7 @@ export function Navigation({ matchCount = 0, onResetDemo, isResetting = false })
                   <span className="text-xs font-bold text-coy-dark">Alex R.</span>
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                 </div>
-                <span className="text-[10px] text-coy-muted">user_001</span>
+                <span className="text-[10px] text-coy-muted"></span>
               </div>
             </div>
           </div>

@@ -4,6 +4,7 @@ import { Navigation } from './components/Navigation.jsx';
 import { HomePage } from './pages/HomePage.jsx';
 import { DiscoverPage } from './pages/DiscoverPage.jsx';
 import { MatchesPage } from './pages/MatchesPage.jsx';
+import { ChatPage } from './pages/ChatPage.jsx';
 import { fetchMatches, resetDatabase } from './services/api.js';
 
 export default function App() {
@@ -67,6 +68,10 @@ export default function App() {
               key={`matches_${resetKey}`}
               path="/matches"
               element={<MatchesPage />}
+            />
+            <Route
+              path="/chat/:matchId"
+              element={<ChatPage />}
             />
             <Route path="*" element={<Navigate to="/discover" replace />} />
           </Routes>

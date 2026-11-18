@@ -49,6 +49,38 @@ export async function fetchMatches() {
   return response.json();
 }
 
+export async function fetchMatchMessages(matchId) {
+  const response = await fetch(`${API_BASE}/matches/${matchId}/messages`, {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Failed to fetch messages');
+  }
+
+  return response.json();
+}
+
+export async function sendMatchMessage(matchId, content) {
+  const response = await fetch(`${API_BASE}/matches/${matchId}/messages`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ content })
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Failed to send message');
+  }
+
+  return response.json();
+}
+
 export async function resetDatabase() {
   const response = await fetch(`${API_BASE}/reset`, {
     method: 'POST',

@@ -325,4 +325,94 @@ describe('Coy Discover Backend API & Matching Engine', () => {
 
     expect(matchesInDb).toHaveLength(1);
   });
+
+  it('16. Dedicated chat allows mutual match participants to retrieve and send messages', async () => {
+    const swipeRes = await request(app)
+      .post('/swipe')
+      .set('x-user-id', 'user_001')
+      .send({ targetId: 'user_002', action: 'LIKE' });
+
+    expect(swipeRes.body.matched).toBe(true);
+    const matchId = swipeRes.body.match.id;
+
+    const initialMessages = await request(app)
+      .get(`/matches/${matchId}/messages`)
+      .set('x-user-id', 'user_001');
+    expect(initialMessages.status).toBe(200);
+    expect(initialMessages.body.messages).toHaveLength(0);
+    expect(initialMessages.body.partner.name).toBe('Riya Sen');
+
+    const sendRes = await request(app)
+      .post(`/matches/${matchId}/messages`)
+      .set('x-user-id', 'user_001')
+      .send({ content: 'Hey Riya, excited to connect on Coy!' });
+
+    expect(sendRes.status).toBe(201);
+    expect(sendRes.body.message.content).toBe('Hey Riya, excited to connect on Coy!');
+
+    const afterSend = await request(app)
+      .get(`/matches/${matchId}/messages`)
+      .set('x-user-id', 'user_001');
+    expect(afterSend.body.messages).toHaveLength(1);
+    expect(afterSend.body.messages[0].content).toBe('Hey Riya, excited to connect on Coy!');
+  });
+
+  it('17. Unauthorized users cannot access private one-to-one chats', async () => {
+    const swipeRes = await request(app)
+      .post('/swipe')
+      .set('x-user-id', 'user_001')
+      .send({ targetId: 'user_002', action: 'LIKE' });
+    const matchId = swipeRes.body.match.id;
+
+    const forbiddenGet = await request(app)
+      .get(`/matches/${matchId}/messages`)
+      .set('x-user-id', 'user_010');
+    expect(forbiddenGet.status).toBe(403);
+
+    const forbiddenPost = await request(app)
+      .post(`/matches/${matchId}/messages`)
+      .set('x-user-id', 'user_010')
+      .send({ content: 'I should not be able to talk here' });
+    expect(forbiddenPost.status).toBe(403);
+  });
+
+  it('18. Chat messages persist across database reloads', async () => {
+    const testDbPath = path.join(process.cwd(), 'data', 'test_chat_persistence.db');
+    if (fs.existsSync(testDbPath)) {
+      fs.unlinkSync(testDbPath);
+    }
+
+    let persistentDb = initializeDatabase(testDbPath);
+    seedDatabase(persistentDb);
+    let testSetup = createApp(persistentDb);
+
+    const swipeRes = await request(testSetup.app)
+      .post('/swipe')
+      .set('x-user-id', 'user_001')
+      .send({ targetId: 'user_002', action: 'LIKE' });
+    const matchId = swipeRes.body.match.id;
+
+    await request(testSetup.app)
+      .post(`/matches/${matchId}/messages`)
+      .set('x-user-id', 'user_001')
+      .send({ content: 'Persistent private message' });
+
+    closeDatabase(persistentDb);
+
+    persistentDb = initializeDatabase(testDbPath);
+    testSetup = createApp(persistentDb);
+
+    const checkRes = await request(testSetup.app)
+      .get(`/matches/${matchId}/messages`)
+      .set('x-user-id', 'user_001');
+
+    expect(checkRes.status).toBe(200);
+    expect(checkRes.body.messages).toHaveLength(1);
+    expect(checkRes.body.messages[0].content).toBe('Persistent private message');
+
+    closeDatabase(persistentDb);
+    if (fs.existsSync(testDbPath)) {
+      fs.unlinkSync(testDbPath);
+    }
+  });
 });

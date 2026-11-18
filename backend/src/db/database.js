@@ -55,6 +55,16 @@ export function initializeDatabase(dbPath = process.env.DATABASE_PATH || './data
       FOREIGN KEY (userAId) REFERENCES users(id) ON DELETE CASCADE,
       FOREIGN KEY (userBId) REFERENCES users(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS messages (
+      id TEXT PRIMARY KEY,
+      matchId TEXT NOT NULL,
+      senderId TEXT NOT NULL,
+      content TEXT NOT NULL,
+      createdAt TEXT NOT NULL,
+      FOREIGN KEY (matchId) REFERENCES matches(id) ON DELETE CASCADE,
+      FOREIGN KEY (senderId) REFERENCES users(id) ON DELETE CASCADE
+    );
   `);
 
   return db;

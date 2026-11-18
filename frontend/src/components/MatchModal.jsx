@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, Sparkles, ArrowRight, Compass } from 'lucide-react';
+import { Heart, Sparkles, MessageCircle, Compass } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export function MatchModal({ match, onClose }) {
@@ -11,9 +11,9 @@ export function MatchModal({ match, onClose }) {
   const currentUserPhoto = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80';
   const partner = match.profile;
 
-  const handleGoToMatches = () => {
+  const handleStartChat = () => {
     onClose();
-    navigate('/matches');
+    navigate(`/chat/${match.id}`);
   };
 
   return (
@@ -94,11 +94,11 @@ export function MatchModal({ match, onClose }) {
           <div className="flex flex-col gap-2.5">
             <button
               type="button"
-              onClick={handleGoToMatches}
+              onClick={handleStartChat}
               className="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-coral-500 to-rose-500 hover:from-coral-600 hover:to-rose-600 text-white font-bold text-sm shadow-md shadow-coral-500/25 flex items-center justify-center gap-2 active:scale-98 transition-all cursor-pointer"
             >
-              <span>View Matches</span>
-              <ArrowRight className="w-4 h-4" />
+              <MessageCircle className="w-4 h-4" />
+              <span>Start Conversation</span>
             </button>
 
             <button

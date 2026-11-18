@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Heart, MapPin, GraduationCap, Calendar, Sparkles, MessageCircle, X, Compass, ShieldCheck } from 'lucide-react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { fetchMatches } from '../services/api.js';
 import { ErrorAlert } from '../components/ErrorAlert.jsx';
 
 export function MatchesPage() {
+  const navigate = useNavigate();
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -38,6 +39,11 @@ export function MatchesPage() {
     } catch {
       return 'Recently';
     }
+  };
+
+  const handleStartChat = (matchId) => {
+    setSelectedMatch(null);
+    navigate(`/chat/${matchId}`);
   };
 
   if (loading) {
@@ -155,10 +161,14 @@ export function MatchesPage() {
 
                     <button
                       type="button"
-                      className="px-3 py-1 rounded-xl bg-coy-warm hover:bg-stone-200 text-stone-800 text-xs font-bold flex items-center gap-1 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStartChat(item.matchId);
+                      }}
+                      className="px-3.5 py-1.5 rounded-xl bg-gradient-to-tr from-coral-500 to-rose-400 hover:from-coral-600 hover:to-rose-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm active:scale-95 transition-all"
                     >
-                      <MessageCircle className="w-3.5 h-3.5 text-stone-500" />
-                      <span>View</span>
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      <span>Chat</span>
                     </button>
                   </div>
                 </div>
@@ -243,8 +253,8 @@ export function MatchesPage() {
               <div className="pt-2">
                 <button
                   type="button"
-                  onClick={() => alert(`Starting encrypted chat with ${selectedMatch.profile.name}...`)}
-                  className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-coral-500 to-rose-500 hover:from-coral-600 hover:to-rose-600 text-white font-bold text-sm shadow-md shadow-coral-500/20 active:scale-98 transition-all flex items-center justify-center gap-2"
+                  onClick={() => handleStartChat(selectedMatch.matchId)}
+                  className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-coral-500 to-rose-500 hover:from-coral-600 hover:to-rose-600 text-white font-bold text-sm shadow-md shadow-coral-500/20 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <MessageCircle className="w-4 h-4" />
                   <span>Start Conversation</span>

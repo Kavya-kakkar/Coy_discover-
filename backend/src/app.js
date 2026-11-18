@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { authMiddleware } from './middleware/auth.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { DiscoveryService } from './services/discoveryService.js';
+import { ChatService } from './services/chatService.js';
 import { createApiRouter } from './routes/api.js';
 import { getDatabase } from './db/database.js';
 
@@ -13,7 +14,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const distPath = path.resolve(__dirname, '../../frontend/dist');
 
-export function createApp(database = getDatabase()) {
+export function createApp(database = getDatabase(), wsHub = null) {
   const app = express();
 
   app.use(cors());
@@ -21,7 +22,8 @@ export function createApp(database = getDatabase()) {
   app.use(authMiddleware);
 
   const discoveryService = new DiscoveryService(database);
-  const apiRouter = createApiRouter(discoveryService, database);
+  const chatService = new ChatService(database);
+  const apiRouter = createApiRouter(discoveryService, chatService, wsHub, database);
 
   app.use('/api', apiRouter);
   app.use('/', apiRouter);
@@ -38,5 +40,5 @@ export function createApp(database = getDatabase()) {
 
   app.use(errorHandler);
 
-  return { app, discoveryService, database };
+  return { app, discoveryService, chatService, database, wsHub };
 }
