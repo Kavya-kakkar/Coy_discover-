@@ -8,12 +8,43 @@ Unlike conventional dating platforms that monetize or leak one-sided interest vi
 
 ---
 
-## 1. Key Features
+## 1. User Interface & Screenshots
+
+### Discover Swipe Experience
+Interactive mobile-first card deck with gesture tracking, visual stamps, and desktop controls.
+
+![Discover Feed](Images/Discover.png)
+
+---
+
+### "It's a Match!" Celebration
+Instant celebration modal confirming mutual interest with zero prior leaks.
+
+![Mutual Match Celebration](Images/Matching.png)
+
+---
+
+### Private One-to-One Real-Time Chat
+End-to-end private conversation with real-time WebSocket messaging, persistent chat history, and typing indicators.
+
+![Chat UI](Images/Chat%20UI.png)
+
+---
+
+### Main Interface & Shell Navigation
+Responsive navigation shell with placeholder home page, discover feed, and mutual matches badge.
+
+![Main Interface](Images/Main%20Interface.png)
+
+---
+
+## 2. Key Features
 
 - **Privacy-First Matching Engine**: Matches are created exclusively when both users reciprocate interest (`LIKE`). One-sided likes remain completely confidential.
 - **Interactive Swipe Discovery**: Native touch, drag, and release gestures powered by Framer Motion, with dynamic rotation, directional resistance, and responsive LIKE/PASS visual indicator badges.
 - **Desktop Dual Controls**: Dedicated high-contrast Like and Pass buttons alongside keyboard shortcuts (`Left Arrow` for PASS, `Right Arrow` for LIKE).
 - **Match Celebration**: Instant modal celebration highlighting mutual connection, partner profiles, and privacy confirmation.
+- **Private One-to-One Chat**: Real-time WebSocket messaging with simulated typing indicators, contextual responses, and persistent chat history stored in SQLite.
 - **Authoritative SQLite Persistence**: Atomic transactions (`BEGIN IMMEDIATE TRANSACTION`), unique composite keys, and canonical pair ordering prevent duplicate records and state desynchronization.
 - **Curated Profiles**: Pre-seeded database of 35 diverse candidates with verified bios, collegiate affiliations, and interest tags.
 - **Responsive Adaptive Navigation**: Clean top navigation for desktop views and an accessible, fixed bottom bar for mobile screens.
@@ -22,24 +53,28 @@ Unlike conventional dating platforms that monetize or leak one-sided interest vi
 
 ---
 
-## 2. System Architecture
+## 3. System Architecture
 
 ```mermaid
 flowchart TD
-    subgraph Frontend ["Frontend (React + Vite + Tailwind)"]
-        UI[Discover / Matches / Home Views]
+    subgraph Frontend ["Frontend (React + Vite + Tailwind + Framer Motion)"]
+        UI[Discover / Matches / Chat / Home Views]
         Motion[Framer Motion Gesture Engine]
         APIClient[REST Client /api]
+        WSClient[WebSocket Client /ws]
         UI --> Motion
         Motion --> APIClient
+        UI --> WSClient
     end
 
-    subgraph Backend ["Backend (Node.js + Express)"]
+    subgraph Backend ["Backend (Node.js + Express + WebSocket)"]
         Router[API Router]
+        WSHub[WebSocket Hub]
         Auth[Mock Auth Middleware user_001]
-        Service[Discovery Service & Matching Engine]
+        Service[Discovery & Chat Services]
         Router --> Auth
         Auth --> Service
+        WSHub --> Service
     end
 
     subgraph Database ["Persistence Layer (SQLite)"]
@@ -47,18 +82,21 @@ flowchart TD
         Profiles[(Profiles)]
         Swipes[(Swipes)]
         Matches[(Matches)]
+        Messages[(Messages)]
         Service --> Users
         Service --> Profiles
         Service --> Swipes
         Service --> Matches
+        Service --> Messages
     end
 
     APIClient <--> Router
+    WSClient <--> WSHub
 ```
 
 ---
 
-## 3. Technology Stack
+## 4. Technology Stack
 
 ### Frontend
 - **Framework**: React 18 with Vite
@@ -70,6 +108,7 @@ flowchart TD
 ### Backend
 - **Runtime**: Node.js v24
 - **Framework**: Express.js
+- **Real-Time Engine**: WebSocket (`ws`)
 - **Database**: SQLite (native zero-dependency `node:sqlite` DatabaseSync)
 - **Utilities**: CORS, Dotenv
 
@@ -79,15 +118,21 @@ flowchart TD
 
 ---
 
-## 4. Folder Structure
+## 5. Folder Structure
 
 ```
 coy_discover/
+├── Images/
+│   ├── Chat UI.png
+│   ├── Discover.png
+│   ├── Main Interface.png
+│   └── Matching.png
 ├── backend/
 │   ├── data/
 │   │   └── coy_discover.db
 │   ├── src/
 │   │   ├── controllers/
+│   │   │   ├── chatController.js
 │   │   │   ├── feedController.js
 │   │   │   ├── matchesController.js
 │   │   │   └── swipeController.js
@@ -100,9 +145,11 @@ coy_discover/
 │   │   ├── routes/
 │   │   │   └── api.js
 │   │   ├── services/
+│   │   │   ├── chatService.js
 │   │   │   └── discoveryService.js
 │   │   ├── app.js
-│   │   └── server.js
+│   │   ├── server.js
+│   │   └── websocket.js
 │   ├── tests/
 │   │   └── api.test.js
 │   ├── package.json
@@ -118,6 +165,7 @@ coy_discover/
 │   │   │   ├── ProfileCard.jsx
 │   │   │   └── SwipeControls.jsx
 │   │   ├── pages/
+│   │   │   ├── ChatPage.jsx
 │   │   │   ├── DiscoverPage.jsx
 │   │   │   ├── HomePage.jsx
 │   │   │   └── MatchesPage.jsx
@@ -139,9 +187,9 @@ coy_discover/
 
 ---
 
-## 5. Database Schema
+## 6. Database Schema
 
-The database relies on four relational tables enforced by SQLite foreign keys and unique constraints:
+The database relies on five relational tables enforced by SQLite foreign keys and unique constraints:
 
 ### Users
 - `id` (TEXT, Primary Key): Unique user identifier.
@@ -175,9 +223,16 @@ The database relies on four relational tables enforced by SQLite foreign keys an
 - `createdAt` (TEXT, Not Null): ISO 8601 timestamp.
 - **Constraint**: `UNIQUE(userAId, userBId)` prevents duplicate match records for any pair.
 
+### Messages
+- `id` (TEXT, Primary Key): Unique message identifier.
+- `matchId` (TEXT, Not Null, Foreign Key -> `matches.id`): Target match.
+- `senderId` (TEXT, Not Null, Foreign Key -> `users.id`): Author user ID.
+- `content` (TEXT, Not Null): Chat text content.
+- `createdAt` (TEXT, Not Null): ISO 8601 timestamp.
+
 ---
 
-## 6. Privacy Design & Security
+## 7. Privacy Design & Security
 
 1. **Zero Exposure of Incoming Likes**: The `GET /feed` query fetches candidates excluding both self and any user already swiped on by the logged-in user. It never reads or joins incoming swipe records for candidate profiles.
 2. **No Pending Likes Endpoint**: There is deliberately no endpoint that returns who liked the current user.
@@ -185,40 +240,8 @@ The database relies on four relational tables enforced by SQLite foreign keys an
 4. **Canonical Pair Sorting**: To eliminate race conditions where both users like each other simultaneously, match rows store `userAId` and `userBId` sorted lexicographically (`userAId < userBId`) with a database-level unique constraint.
 5. **No Self-Swiping**: Swipes targeting the logged-in user's own identifier are validated and rejected server-side with HTTP 400.
 6. **Immutable Swipes**: Once a user swipes LIKE or PASS on a profile, any subsequent swipe returns HTTP 409 Conflict.
-7. **Safe Error Masking**: Application errors return clean, standardized JSON messages without exposing internal stack traces or raw database queries.
-
----
-
-## 7. Matching Algorithm
-
-When User A submits a swipe on User B with action `LIKE`:
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Client as User A (Frontend)
-    participant API as Express API (/swipe)
-    participant DB as SQLite Transaction
-
-    Client->>API: POST /swipe { targetId: "User B", action: "LIKE" }
-    API->>DB: BEGIN IMMEDIATE TRANSACTION
-    API->>DB: Check existing swipe from User A on User B
-    alt Swipe already exists
-        API-->>Client: 409 Conflict
-    else Valid new swipe
-        API->>DB: INSERT INTO swipes (User A, User B, "LIKE")
-        API->>DB: SELECT action FROM swipes WHERE swiperId = "User B" AND targetId = "User A"
-        alt Reciprocal LIKE found
-            API->>DB: Canonicalize: userAId = min(A, B), userBId = max(A, B)
-            API->>DB: INSERT INTO matches (userAId, userBId)
-            API->>DB: COMMIT TRANSACTION
-            API-->>Client: 200 OK { success: true, matched: true, match: { profile: ... } }
-        else No reciprocal LIKE
-            API->>DB: COMMIT TRANSACTION
-            API-->>Client: 200 OK { success: true, matched: false }
-        end
-    end
-```
+7. **Authorized One-to-One Conversations**: Private chat messages can only be fetched or sent by verified participants of that mutual match.
+8. **Safe Error Masking**: Application errors return clean, standardized JSON messages without exposing internal stack traces or raw database queries.
 
 ---
 
@@ -336,7 +359,61 @@ Retrieves mutual matches belonging to the authenticated user.
 
 ---
 
-### 4. POST `/reset` or `/api/reset`
+### 4. GET `/matches/:matchId/messages` or `/api/matches/:matchId/messages`
+Retrieves chat history for a mutual match.
+
+**Response (200 OK)**:
+```json
+{
+  "matchId": "match_e762c2f6-39eb-4a62-97b7-69faebadbe38",
+  "partner": {
+    "id": "user_002",
+    "name": "Riya Sen",
+    "age": 23,
+    "photo": "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80",
+    "city": "Bengaluru"
+  },
+  "messages": [
+    {
+      "id": "msg_001",
+      "matchId": "match_e762c2f6-39eb-4a62-97b7-69faebadbe38",
+      "senderId": "user_001",
+      "content": "Hey Riya!",
+      "createdAt": "2026-11-18T10:00:00.000Z"
+    }
+  ]
+}
+```
+
+---
+
+### 5. POST `/matches/:matchId/messages` or `/api/matches/:matchId/messages`
+Sends a message in a private conversation.
+
+**Request Body**:
+```json
+{
+  "content": "Hey Riya, excited to connect on Coy!"
+}
+```
+
+**Response (201 Created)**:
+```json
+{
+  "success": true,
+  "message": {
+    "id": "msg_002",
+    "matchId": "match_e762c2f6-39eb-4a62-97b7-69faebadbe38",
+    "senderId": "user_001",
+    "content": "Hey Riya, excited to connect on Coy!",
+    "createdAt": "2026-11-18T10:00:05.000Z"
+  }
+}
+```
+
+---
+
+### 6. POST `/reset` or `/api/reset`
 Utility endpoint for demonstration and QA resetting. Restores the database with initial profiles and seeded incoming likes for `user_001`.
 
 **Response (200 OK)**:
@@ -395,7 +472,7 @@ Open your browser at `http://localhost:3000`.
 
 ## 10. Automated Testing
 
-The backend includes automated tests covering 15 distinct functional, privacy, and architectural requirements:
+The backend includes automated tests covering 18 distinct functional, privacy, and architectural requirements:
 
 1. `GET /feed` returns eligible profiles.
 2. Current user (`user_001`) is excluded from feed.
@@ -412,6 +489,9 @@ The backend includes automated tests covering 15 distinct functional, privacy, a
 13. Incoming likes are never exposed in feed or profile payloads.
 14. Swipe records and feed exclusion persist across database restarts.
 15. Simultaneous reciprocal likes result in exactly one match.
+16. Dedicated chat allows mutual match participants to retrieve and send messages.
+17. Unauthorized users cannot access private one-to-one chats (403 Forbidden).
+18. Chat messages persist across database reloads.
 
 Execute the test suite with:
 ```bash
@@ -429,10 +509,4 @@ npm run build
 ```
 The compiled assets will be placed in `frontend/dist`.
 
-2. The Express backend can serve the compiled frontend as static files or deploy alongside a reverse proxy (e.g., Nginx, Caddy, Railway, Render).
-
-3. Set production environment variables:
-```
-PORT=5000
-DATABASE_PATH=/var/data/coy_discover.db
-```
+2. The Express backend serves the compiled frontend from `frontend/dist` in production mode.
