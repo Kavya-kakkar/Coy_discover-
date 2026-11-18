@@ -1,0 +1,19 @@
+{
+  "name": "coy-discover",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"blue,magenta\" \"npm run backend\" \"npm run frontend\"",
+    "backend:install": "npm --prefix backend install",
+    "frontend:install": "npm --prefix frontend install",
+    "postinstall": "npm run backend:install && npm run frontend:install",
+    "backend": "npm --prefix backend run dev",
+    "frontend": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "seed": "npm --prefix backend run seed",
+    "test": "npm --prefix backend test"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
